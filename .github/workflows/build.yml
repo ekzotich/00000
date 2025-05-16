@@ -7,19 +7,30 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Setup MSBuild Environment
-      uses: microsoft/setup-msbuild@v2
-      with:
-        vs-version: '2022'
-        msbuild-architecture: x64
-
-    - name: Configure MSVC Environment with msvc-dev-cmd
+    - name: Install Visual Studio Build Tools
       run: |
-        call "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64
-        if errorlevel 1 (
-          echo vcvarsall.bat call failed, checking msvc-dev-cmd...
-          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64
+        choco install visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.Component.MSBuild" -y
+      shell: cmd
+
+    - name: Find Visual Studio Path with vswhere
+      run: |
+        for /f "tokens=*" %%i in ('"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath') do set "VS_PATH=%%i"
+        if not defined VS_PATH (
+          echo Visual Studio with required components not found.
+          exit 1
         )
+        echo Visual Studio found at: %VS_PATH%
+        set "VCVARSALL_PATH=%VS_PATH%\VC\Auxiliary\Build\vcvarsall.bat"
+        echo Using vcvarsall.bat at: %VCVARSALL_PATH%
+        if not exist "%VCVARSALL_PATH%" (
+          echo vcvarsall.bat not found at %VCVARSALL_PATH%
+          exit 1
+        )
+      shell: cmd
+
+    - name: Configure MSVC Environment
+      run: |
+        call "%VCVARSALL_PATH%" x64
         where cl
         if errorlevel 1 (
           echo cl.exe not found in PATH.
@@ -27,7 +38,6 @@ jobs:
         )
         echo cl.exe found successfully.
       shell: cmd
-      continue-on-error: true
 
     - name: Add ImGui Source
       run: |
