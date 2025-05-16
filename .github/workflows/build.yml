@@ -1,4 +1,4 @@
-name: Build Enhanced DLL for Alkad 2588 WH
+name: Build Enhanced DLL for HESUS
 on: [push]
 jobs:
   build:
@@ -22,11 +22,15 @@ jobs:
         mkdir detours
         curl -L -o detours/detours.zip https://github.com/microsoft/Detours/archive/refs/tags/v4.0.1.zip
         7z x detours/detours.zip -odetours -y
-        move detours\Detours-4.0.1\* detours\
-        rmdir detours\Detours-4.0.1
+        if exist detours\Detours-4.0.1 (
+          xcopy detours\Detours-4.0.1\lib.X64\detours.lib detours\ /Y
+          xcopy detours\Detours-4.0.1\include\detours.h detours\ /Y
+          rmdir /S /Q detours\Detours-4.0.1
+        ) else (
+          echo Error: Detours-4.0.1 directory not found
+          exit 1
+        )
         del detours\detours.zip
-        copy detours\lib.X64\detours.lib detours\
-        copy detours\include\detours.h detours\
       shell: cmd
 
     - name: Build DLL
@@ -38,6 +42,9 @@ jobs:
 
     - name: Upload DLL
       uses: actions/upload-artifact@v4
+      with:
+        name: Dll1.dll
+        path: Dll1.dll
       with:
         name: Dll1.dll
         path: Dll1.dll
