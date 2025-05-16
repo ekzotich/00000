@@ -7,14 +7,6 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Debug Visual Studio Paths
-      run: |
-        dir "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" 2>nul
-        dir "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" 2>nul
-        dir "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" 2>nul
-        dir "C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" 2>nul
-      shell: cmd
-
     - name: Setup MSBuild Environment
       uses: microsoft/setup-msbuild@v2
       with:
@@ -44,10 +36,6 @@ jobs:
 
     - name: Build DLL
       run: |
-        call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" x64
-        if errorlevel 1 call "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64
-        if errorlevel 1 call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64
-        if errorlevel 1 call "C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
         cl /Y- /O2 /MD /W4 /TP /EHsc /D "WIN32_LEAN_AND_MEAN" /D "NOMINMAX" /D "_HAS_PCH=0" /I "C:\Program Files (x86)\Windows Kits\10\include\10.0.22621.0\um" /I "C:\Program Files (x86)\Windows Kits\10\include\10.0.22621.0\shared" /I "imgui" /I "detours" enhanced_hack_v2.cpp imgui\imgui.cpp imgui\imgui_draw.cpp imgui\imgui_widgets.cpp imgui\imgui_tables.cpp imgui\backends\imgui_impl_dx11.cpp imgui\backends\imgui_impl_win32.cpp /link /DLL /OUT:Dll1.dll /LIBPATH:"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64" /LIBPATH:"detours" d3d11.lib d3dcompiler.lib advapi32.lib winmm.lib detours.lib user32.lib
         if not exist Dll1.dll exit 1
       shell: cmd
