@@ -17,15 +17,38 @@ jobs:
         echo Visual Studio Build Tools installed successfully.
       shell: cmd
 
+    - name: Find Visual Studio Path with vswhere
+      run: |
+        echo Finding Visual Studio path with vswhere...
+        for /f "tokens=*" %%i in ('"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath') do set "VS_PATH=%%i"
+        if not defined VS_PATH (
+          echo Visual Studio with required components not found.
+          exit /b 1
+        )
+        echo Visual Studio found at: "%VS_PATH%"
+        set "VCVARSALL_PATH=%VS_PATH%\VC\Auxiliary\Build\vcvarsall.bat"
+        echo Using vcvarsall.bat at: "%VCVARSALL_PATH%"
+        if not exist "%VCVARSALL_PATH%" (
+          echo vcvarsall.bat not found at "%VCVARSALL_PATH%"
+          exit /b 1
+        )
+      shell: cmd
+
     - name: Configure MSVC Environment
       run: |
         echo Configuring MSVC environment...
-        call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64
+        call "%VCVARSALL_PATH%" x64
         where cl
+        if errorlevel 1 (
+          echo cl.exe not found in PATH.
+          exit /b 1
+        )
+        echo cl.exe found successfully.
       shell: cmd
 
     - name: Add ImGui Source
       run: |
+        echo Adding ImGui source...
         mkdir imgui
         curl -L -o imgui/imgui.zip https://github.com/ocornut/imgui/archive/refs/tags/v1.91.6.zip
         7z x imgui/imgui.zip -oimgui -y
@@ -34,16 +57,21 @@ jobs:
         del imgui\imgui.zip
       shell: cmd
 
-    - name: Add Detours
+    - name: Add and Build Detours
       run: |
+        echo Adding and building Detours...
         mkdir detours
         curl -L -o detours/detours.zip https://github.com/microsoft/Detours/archive/refs/tags/v4.0.1.zip
         7z x detours/detours.zip -odetours -y
         del detours\detours.zip
-        xcopy detours\Detours-4.0.1\* detours\ /E /S /Y
+        cd detours\Detours-4.0.1
+        nmake /f Makefile
+        xcopy lib.X64\detours.lib ..\ >nul 2>&1
+        xcopy include\detours.h ..\ >nul 2>&1
+        cd ..\..
         rmdir /s /q detours\Detours-4.0.1
-        copy detours\lib.X64\detours.lib detours\ >nul 2>&1
-        copy detours\include\detours.h detours\ >nul 2>&1
+        if not exist detours\detours.lib echo Warning: detours.lib not built, DLL build may fail.
+        if not exist detours\detours.h echo Warning: detours.h not found, DLL build may fail.
       shell: cmd
 
     - name: Build DLL
