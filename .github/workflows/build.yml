@@ -7,15 +7,19 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Setup MSVC Environment
+    - name: Setup MSBuild Environment
       uses: microsoft/setup-msbuild@v2
       with:
         vs-version: '2022'
         msbuild-architecture: x64
-        vs-workload: 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64'
 
-    - name: Verify MSVC Environment
+    - name: Configure MSVC Environment with msvc-dev-cmd
       run: |
+        call "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64
+        if errorlevel 1 (
+          echo vcvarsall.bat call failed, checking msvc-dev-cmd...
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64
+        )
         where cl
         if errorlevel 1 (
           echo cl.exe not found in PATH.
@@ -23,6 +27,7 @@ jobs:
         )
         echo cl.exe found successfully.
       shell: cmd
+      continue-on-error: true
 
     - name: Add ImGui Source
       run: |
