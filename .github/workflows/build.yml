@@ -1,4 +1,4 @@
-name: Build Enhanced DLL for HESUS
+name: Build Enhanced DLL for Alkad 2588 WH
 on: [push]
 jobs:
   build:
@@ -42,9 +42,6 @@ jobs:
 
     - name: Upload DLL
       uses: actions/upload-artifact@v4
-      with:
-        name: Dll1.dll
-        path: Dll1.dll
       with:
         name: Dll1.dll
         path: Dll1.dll
