@@ -1,4 +1,4 @@
-name: Build Enhanced DLL for svo
+name: Build Enhanced DLL for Alkad 2588 WH
 on: [push]
 jobs:
   build:
@@ -17,13 +17,13 @@ jobs:
         7z x imgui/imgui.zip -oimgui -y
         mv imgui/imgui-1.91.6/* imgui/
         rmdir imgui/imgui-1.91.6
-        rm imgui/imgui.zip
+        del imgui\imgui.zip
       shell: cmd
 
     - name: Build DLL
       run: |
-        msbuild -t:vcvarsall -arch:x64
-        cl /Y- /O2 /MD /W4 /TP /EHsc /D "WIN32_LEAN_AND_MEAN" /D "NOMINMAX" /D "_HAS_PCH=0" /I "C:\Program Files (x86)\Windows Kits\10\include\10.0.26100.0\um" /I "C:\Program Files (x86)\Windows Kits\10\include\10.0.26100.0\shared" /I "imgui" enhanced_hack_v2.cpp imgui/imgui.cpp imgui/imgui_draw.cpp imgui/imgui_widgets.cpp imgui/imgui_tables.cpp /link /DLL /OUT:Dll1.dll /LIBPATH:"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.26100.0\um\x64" d3d9.lib d3dcompiler.lib advapi32.lib winmm.lib
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+        cl /Y- /O2 /MD /W4 /TP /EHsc /D "WIN32_LEAN_AND_MEAN" /D "NOMINMAX" /D "_HAS_PCH=0" /I "C:\Program Files (x86)\Windows Kits\10\include\10.0.26100.0\um" /I "C:\Program Files (x86)\Windows Kits\10\include\10.0.26100.0\shared" /I "imgui" enhanced_hack_v2.cpp imgui\imgui.cpp imgui\imgui_draw.cpp imgui\imgui_widgets.cpp imgui\imgui_tables.cpp /link /DLL /OUT:Dll1.dll /LIBPATH:"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.26100.0\um\x64" d3d9.lib d3dcompiler.lib advapi32.lib winmm.lib
         if not exist Dll1.dll exit 1
       shell: cmd
 
