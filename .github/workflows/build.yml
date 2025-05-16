@@ -1,4 +1,4 @@
-name: Build Enhanced DLL for Alkad 2588 WH
+name: Build Enhanced DLL for 00000
 on: [push]
 jobs:
   build:
