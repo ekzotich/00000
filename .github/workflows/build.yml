@@ -7,20 +7,44 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Configure MSVC Environment
+    - name: Find Visual Studio Path with vswhere
       run: |
-        call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" x64
-        if errorlevel 1 call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
-        if errorlevel 1 call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64
-        if errorlevel 1 call "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64
+        for /f "tokens=*" %%i in ('"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath') do set "VS_PATH=%%i"
+        if not defined VS_PATH (
+          echo Visual Studio with required components not found.
+          exit 1
+        )
+        echo Visual Studio found at: %VS_PATH%
+        set "VCVARSALL_PATH=%VS_PATH%\VC\Auxiliary\Build\vcvarsall.bat"
+        echo Using vcvarsall.bat at: %VCVARSALL_PATH%
+        if not exist "%VCVARSALL_PATH%" (
+          echo vcvarsall.bat not found at %VCVARSALL_PATH%
+          exit 1
+        )
       shell: cmd
       continue-on-error: true
 
-    - name: Setup MSBuild as Fallback
-      if: steps.ConfigureMSVCEnvironment.outcome != 'success'
-      uses: microsoft/setup-msbuild@v2
-      with:
-        msbuild-architecture: x64
+    - name: Configure MSVC Environment
+      if: steps.FindVisualStudioPathWithVswhere.outcome == 'success'
+      run: |
+        call "%VCVARSALL_PATH%" x64
+      shell: cmd
+
+    - name: Fallback Setup for MSVC
+      if: steps.FindVisualStudioPathWithVswhere.outcome != 'success'
+      run: |
+        echo Attempting to install Visual Studio Build Tools...
+        choco install visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64" -y
+        for /f "tokens=*" %%i in ('"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath') do set "VS_PATH=%%i"
+        if not defined VS_PATH (
+          echo Visual Studio with required components still not found after installation.
+          exit 1
+        )
+        echo Visual Studio found at: %VS_PATH%
+        set "VCVARSALL_PATH=%VS_PATH%\VC\Auxiliary\Build\vcvarsall.bat"
+        echo Using vcvarsall.bat at: %VCVARSALL_PATH%
+        call "%VCVARSALL_PATH%" x64
+      shell: cmd
 
     - name: Add ImGui Source
       run: |
