@@ -27,6 +27,7 @@ jobs:
           echo Configuring MSVC Preview environment...
           call "C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Auxiliary\Build\vcvarsall.bat" x64
           echo MSVC Preview environment initialized.
+        shell: cmd
 
       # 3. Компиляция кода в Dll1.dll
       - name: Build Dll1.dll
@@ -41,11 +42,12 @@ jobs:
           name: Dll1
           path: Dll1.dll
 
-      # 5. Логирование успешного завершения (опционально)
+      # 5. Логирование успешного завершения
       - name: Log success
         if: success()
         run: echo Build completed successfully!
+        shell: cmd
 
 # Ограничения окружения
 env:
-  PATH: "C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64;${env.PATH}"
+  PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64;${{ env.PATH }}"
