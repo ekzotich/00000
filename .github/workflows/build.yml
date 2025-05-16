@@ -9,7 +9,18 @@ jobs:
 
     - name: Install Visual Studio Build Tools
       run: |
-        choco install visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.Component.MSBuild" -y
+        echo Installing Visual Studio 2022 Build Tools...
+        choco install visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.Component.MSBuild --add Microsoft.VisualStudio.Component.Windows10SDK --add Microsoft.VisualStudio.Component.VC.CoreIde" -y
+        if errorlevel 1 (
+          echo Failed to install Visual Studio Build Tools.
+          exit 1
+        )
+        echo Visual Studio Build Tools installed successfully.
+      shell: cmd
+
+    - name: Refresh Environment
+      run: |
+        refreshenv
       shell: cmd
 
     - name: Find Visual Studio Path with vswhere
@@ -17,6 +28,8 @@ jobs:
         for /f "tokens=*" %%i in ('"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath') do set "VS_PATH=%%i"
         if not defined VS_PATH (
           echo Visual Studio with required components not found.
+          dir "C:\Program Files (x86)\Microsoft Visual Studio\2022" /s /p
+          dir "C:\Program Files\Microsoft Visual Studio\2022" /s /p
           exit 1
         )
         echo Visual Studio found at: %VS_PATH%
@@ -45,7 +58,7 @@ jobs:
         curl -L -o imgui/imgui.zip https://github.com/ocornut/imgui/archive/refs/tags/v1.91.6.zip
         7z x imgui/imgui.zip -oimgui -y
         move imgui\imgui-1.91.6\* imgui\
-        rmdir imgui\imgui-1.91.6
+        if exist imgui\imgui-1.91.6 rmdir /s /q imgui\imgui-1.91.6
         del imgui\imgui.zip
       shell: cmd
 
