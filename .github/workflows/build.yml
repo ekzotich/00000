@@ -12,7 +12,7 @@ jobs:
 
     - name: Build DLL
       run: |
-        call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64
+        & "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64
         cl /Y- /O2 /MD /W4 /TP /EHsc /D "WIN32_LEAN_AND_MEAN" /D "NOMINMAX" /D "_HAS_PCH=0" /I "C:\Program Files (x86)\Windows Kits\10\include\10.0.26100.0\um" enhanced_hack_v2.cpp /link /DLL /OUT:Dll1.dll /LIBPATH:"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.26100.0\um\x64" d3d11.lib d3dcompiler.lib advapi32.lib winmm.lib
         if (-Not (Test-Path "Dll1.dll")) { exit 1 }
       shell: pwsh
