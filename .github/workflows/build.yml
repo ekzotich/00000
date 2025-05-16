@@ -10,131 +10,46 @@ jobs:
     - name: Install Visual Studio Build Tools
       run: |
         echo Installing Visual Studio 2022 Build Tools...
-        choco install visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.Component.MSBuild --add Microsoft.VisualStudio.Component.Windows10SDK --add Microsoft.VisualStudio.Component.VC.CoreIde" -y || (
-          if errorlevel 3010 (
-            echo Reboot required but continuing...
-            exit /b 0
-          ) else (
-            echo Unexpected error during installation.
-            exit /b 1
-          )
-        )
+        choco install visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.Component.MSBuild" -y || if errorlevel 3010 exit /b 0
         echo Waiting for Visual Studio Installer to complete...
-        set "MAX_WAIT=300"
-        set "WAIT_INTERVAL=10"
-        set "ELAPSED=0"
-        :wait_loop
-        tasklist | findstr /i "vs_installershell" >nul
-        if errorlevel 1 (
-          echo Visual Studio Installer processes completed.
-          goto :done_wait
-        )
-        if %ELAPSED% GEQ %MAX_WAIT% (
-          echo Timeout waiting for Visual Studio Installer to complete after %MAX_WAIT% seconds.
-          exit /b 1
-        )
-        timeout /t %WAIT_INTERVAL% /nobreak >nul
-        set /a ELAPSED+=WAIT_INTERVAL
-        echo Waiting... %ELAPSED% seconds elapsed.
-        goto :wait_loop
-        :done_wait
+        timeout /t 120 /nobreak >nul
+        tasklist | findstr /i "vs_installershell" >nul || echo Visual Studio Installer processes completed.
         echo Visual Studio Build Tools installed successfully.
-        echo Checking for installation directory...
-        dir "C:\Program Files (x86)\Microsoft Visual Studio\Installer" /s /p
-      shell: cmd
-
-    - name: Verify Visual Studio Installation
-      run: |
-        echo Verifying Visual Studio installation...
-        if not exist "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" (
-          echo vswhere.exe not found. Installation may have failed.
-          dir "C:\Program Files (x86)\Microsoft Visual Studio\Installer" /s /p
-          exit /b 1
-        )
-        "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-        if errorlevel 1 (
-          echo Failed to locate Visual Studio with required components.
-          exit /b 1
-        )
-        echo Visual Studio installation verified.
-      shell: cmd
-
-    - name: Refresh Environment
-      run: |
-        echo Refreshing environment variables...
-        for /f "tokens=*" %%i in ('"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath') do set "VS_PATH=%%i"
-        if not defined VS_PATH (
-          echo Visual Studio path not found during environment refresh.
-          exit /b 1
-        )
-        set "PATH=%VS_PATH%\VC\Tools\MSVC\*\bin\Hostx64\x64;%PATH%"
-        echo Environment variables updated.
-      shell: cmd
-
-    - name: Find Visual Studio Path with vswhere
-      run: |
-        echo Finding Visual Studio path with vswhere...
-        for /f "tokens=*" %%i in ('"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath') do set "VS_PATH=%%i"
-        if not defined VS_PATH (
-          echo Visual Studio with required components not found.
-          dir "C:\Program Files (x86)\Microsoft Visual Studio\2022" /s /p
-          dir "C:\Program Files\Microsoft Visual Studio\2022" /s /p
-          exit /b 1
-        )
-        echo Visual Studio found at: %VS_PATH%
-        set "VCVARSALL_PATH=%VS_PATH%\VC\Auxiliary\Build\vcvarsall.bat"
-        echo Using vcvarsall.bat at: %VCVARSALL_PATH%
-        if not exist "%VCVARSALL_PATH%" (
-          echo vcvarsall.bat not found at %VCVARSALL_PATH%
-          exit /b 1
-        )
       shell: cmd
 
     - name: Configure MSVC Environment
       run: |
         echo Configuring MSVC environment...
-        call "%VCVARSALL_PATH%" x64
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64
         where cl
-        if errorlevel 1 (
-          echo cl.exe not found in PATH. Attempting manual path addition...
-          set "PATH=%VS_PATH%\VC\Tools\MSVC\*\bin\Hostx64\x64;%PATH%"
-          where cl
-          if errorlevel 1 (
-            echo cl.exe still not found. Exiting...
-            exit /b 1
-          )
-        )
-        echo cl.exe found successfully.
       shell: cmd
 
     - name: Add ImGui Source
       run: |
-        echo Adding ImGui source...
         mkdir imgui
         curl -L -o imgui/imgui.zip https://github.com/ocornut/imgui/archive/refs/tags/v1.91.6.zip
         7z x imgui/imgui.zip -oimgui -y
         move imgui\imgui-1.91.6\* imgui\
-        if exist imgui\imgui-1.91.6 rmdir /s /q imgui\imgui-1.91.6
+        rmdir /s /q imgui\imgui-1.91.6
         del imgui\imgui.zip
       shell: cmd
 
     - name: Add Detours
       run: |
-        echo Adding Detours...
         mkdir detours
         curl -L -o detours/detours.zip https://github.com/microsoft/Detours/archive/refs/tags/v4.0.1.zip
         7z x detours/detours.zip -odetours -y
         del detours\detours.zip
-        xcopy detours\Detours-4.0.1\* detours\ /E /S /Y /I
-        if exist detours\Detours-4.0.1 rmdir /s /q detours\Detours-4.0.1
-        if exist detours\lib.X64\detours.lib copy detours\lib.X64\detours.lib detours\
-        if exist detours\include\detours.h copy detours\include\detours.h detours\
+        xcopy detours\Detours-4.0.1\* detours\ /E /S /Y
+        rmdir /s /q detours\Detours-4.0.1
+        copy detours\lib.X64\detours.lib detours\ >nul 2>&1
+        copy detours\include\detours.h detours\ >nul 2>&1
       shell: cmd
 
     - name: Build DLL
       run: |
         echo Building DLL...
-        cl /Y- /O2 /MD /W4 /TP /EHsc /D "WIN32_LEAN_AND_MEAN" /D "NOMINMAX" /D "_HAS_PCH=0" /I "C:\Program Files (x86)\Windows Kits\10\include\10.0.22621.0\um" /I "C:\Program Files (x86)\Windows Kits\10\include\10.0.22621.0\shared" /I "imgui" /I "detours" enhanced_hack_v2.cpp imgui\imgui.cpp imgui\imgui_draw.cpp imgui\imgui_widgets.cpp imgui\imgui_tables.cpp imgui\backends\imgui_impl_dx11.cpp imgui\backends\imgui_impl_win32.cpp /link /DLL /OUT:Dll1.dll /LIBPATH:"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64" /LIBPATH:"detours" d3d11.lib d3dcompiler.lib advapi32.lib winmm.lib detours.lib user32.lib
+        cl /Y- /O2 /MD /W4 /TP /EHsc /D "WIN32_LEAN_AND_MEAN" /D "NOMINMAX" /D "_HAS_PCH=0" /I "imgui" /I "detours" /I "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" enhanced_hack_v2.cpp imgui\imgui.cpp imgui\imgui_draw.cpp imgui\imgui_widgets.cpp imgui\imgui_tables.cpp imgui\backends\imgui_impl_dx11.cpp imgui\backends\imgui_impl_win32.cpp /link /DLL /OUT:Dll1.dll /LIBPATH:"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64" /LIBPATH:"detours" d3d11.lib d3dcompiler.lib detours.lib
         if not exist Dll1.dll exit /b 1
       shell: cmd
 
