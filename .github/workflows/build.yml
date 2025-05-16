@@ -10,11 +10,13 @@ jobs:
     - name: Install Visual Studio Build Tools
       run: |
         echo Installing Visual Studio 2022 Build Tools...
-        choco install visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.Component.MSBuild --add Microsoft.VisualStudio.Component.Windows10SDK" -y || if errorlevel 3010 exit /b 0
+        choco install visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.Component.MSBuild --add Microsoft.VisualStudio.Component.Windows10SDK --add Microsoft.VisualStudio.Component.VC.CoreBuildTools" -y || if errorlevel 3010 exit /b 0
         echo Waiting for Visual Studio Installer to complete...
         timeout /t 120 /nobreak >nul
         tasklist | findstr /i "vs_installershell" >nul || echo Visual Studio Installer processes completed.
         echo Visual Studio Build Tools installed successfully.
+        echo Checking installed components...
+        "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
       shell: cmd
 
     - name: Find Visual Studio Path with vswhere
@@ -25,12 +27,17 @@ jobs:
           dir "C:\Program Files (x86)\Microsoft Visual Studio\Installer" /s /p
           exit /b 1
         )
+        echo Running vswhere to find installation path...
         "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath > vs_path.txt
+        type vs_path.txt
         set /p VS_PATH=<vs_path.txt
         del vs_path.txt
         if not defined VS_PATH (
           echo Visual Studio with required components not found.
+          echo Available Visual Studio installations:
           "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -property installationPath
+          echo Installed components:
+          "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requiresAny -property catalog_productLineVersion
           exit /b 1
         )
         echo Visual Studio found at: "%VS_PATH%"
