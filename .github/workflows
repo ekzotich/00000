@@ -1,0 +1,50 @@
+name: Build with MSVC Preview
+
+# Триггеры: сборка при пушах и PR
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+# Определение jobs
+jobs:
+  build:
+    # Запуск на Windows
+    runs-on: windows-latest
+
+    # Шаги сборки
+    steps:
+      # 1. Проверка кода из репозитория
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Настройка окружения MSVC Preview
+      - name: Setup MSVC Preview environment
+        run: |
+          echo Configuring MSVC Preview environment...
+          call "C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Auxiliary\Build\vcvarsall.bat" x64
+          set "PATH=%PATH%;C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64"
+          echo MSVC Preview environment initialized.
+        shell: cmd
+
+      # 3. Компиляция кода в Dll1.dll
+      - name: Build Dll1.dll
+        run: |
+          cl /EHsc /MD /I "C:\libs\imgui" /I "C:\OpenSSL-Win64\include" enhanced_hack_v2.cpp /link /DLL /OUT:Dll1.dll d3d11.lib d3dcompiler.lib advapi32.lib winmm.lib detours.lib crypt32.lib urlmon.lib
+        shell: cmd
+
+      # 4. Загрузка артефакта (Dll1.dll)
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: Dll1
+          path: Dll1.dll
+
+      # 5. Логирование успешного завершения
+      - name: Log success
+        if: success()
+        run: echo Build completed successfully!
+        shell: cmd
