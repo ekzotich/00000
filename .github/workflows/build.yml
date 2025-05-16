@@ -27,11 +27,11 @@ jobs:
         mkdir detours
         curl -L -o detours/detours.zip https://github.com/microsoft/Detours/archive/refs/tags/v4.0.1.zip
         7z x detours/detours.zip -odetours -y
-        move detours\Detours-4.0.1\* detours\
-        if exist detours\Detours-4.0.1 rmdir /s /q detours\Detours-4.0.1
-        if exist detours\detours.zip del detours\detours.zip
+        del detours\detours.zip
+        xcopy detours\Detours-4.0.1\* detours\ /E /Y /I
+        rmdir /s /q detours\Detours-4.0.1
         copy detours\lib.X64\detours.lib detours\
-        if exist detours\lib.X64 rmdir /s /q detours\lib.X64
+        rmdir /s /q detours\lib.X64
         copy detours\include\detours.h detours\
       shell: cmd
 
