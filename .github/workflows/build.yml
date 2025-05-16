@@ -1,49 +1,24 @@
-name: Build Enhanced DLL for Alkad 2588 WH
+name: Build DLL for Alkad 2588 WH
 on: [push]
 jobs:
   build:
     runs-on: windows-latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+    - uses: actions/checkout@v3
 
     - name: Install Visual Studio Build Tools
       run: |
-        echo Installing Visual Studio Build Tools...
         choco install visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.Component.MSBuild" -y || if errorlevel 3010 exit /b 0
-        echo Waiting for installer...
-        timeout /t 60 /nobreak >nul
-        echo Visual Studio Build Tools installed.
+        timeout /t 30 /nobreak >nul
       shell: cmd
 
-    - name: Find Visual Studio Path
-      run: |
-        echo Finding Visual Studio path...
-        for /f "tokens=*" %%i in ('"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath') do set "VS_PATH=%%i"
-        if not defined VS_PATH (
-          echo Visual Studio not found, using default path...
-          set "VS_PATH=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
-        )
-        set "VCVARSALL_PATH=%VS_PATH%\VC\Auxiliary\Build\vcvarsall.bat"
-        echo Using vcvarsall.bat at: "%VCVARSALL_PATH%"
-        if not exist "%VCVARSALL_PATH%" (
-          echo vcvarsall.bat not found.
-          exit /b 1
-        )
-      shell: cmd
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1.3
+      with:
+        vs-version: '2022'
 
-    - name: Configure MSVC Environment
+    - name: Add ImGui
       run: |
-        echo Configuring MSVC environment...
-        call "%VCVARSALL_PATH%" x64
-        where cl
-        if errorlevel 1 exit /b 1
-        echo cl.exe found.
-      shell: cmd
-
-    - name: Add ImGui Source
-      run: |
-        echo Adding ImGui...
         mkdir imgui
         curl -L -o imgui/imgui.zip https://github.com/ocornut/imgui/archive/refs/tags/v1.91.6.zip
         7z x imgui/imgui.zip -oimgui -y
@@ -54,24 +29,23 @@ jobs:
 
     - name: Add and Build Detours
       run: |
-        echo Adding and building Detours...
         mkdir detours
         curl -L -o detours/detours.zip https://github.com/microsoft/Detours/archive/refs/tags/v4.0.1.zip
         7z x detours/detours.zip -odetours -y
         del detours\detours.zip
         cd detours\Detours-4.0.1
         nmake /f Makefile
-        xcopy lib.X64\detours.lib ..\ >nul
-        xcopy include\detours.h ..\ >nul
+        if exist lib.X64\detours.lib xcopy lib.X64\detours.lib ..\ >nul
+        if exist include\detours.h xcopy include\detours.h ..\ >nul
         cd ..\..
         rmdir /s /q detours\Detours-4.0.1
       shell: cmd
 
     - name: Build DLL
       run: |
-        echo Building DLL...
-        cl /Y- /O2 /MD /W4 /TP /EHsc /D "WIN32_LEAN_AND_MEAN" /D "NOMINMAX" /D "_HAS_PCH=0" /I "imgui" /I "detours" /I "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" enhanced_hack_v2.cpp imgui\imgui.cpp imgui\imgui_draw.cpp imgui\imgui_widgets.cpp imgui\imgui_tables.cpp imgui\backends\imgui_impl_dx11.cpp imgui\backends\imgui_impl_win32.cpp /link /DLL /OUT:Dll1.dll /LIBPATH:"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64" /LIBPATH:"detours" d3d11.lib d3dcompiler.lib detours.lib
-        if not exist Dll1.dll exit /b 1
+        msbuild enhanced_hack_v2.cpp /p:Configuration=Release /p:Platform=x64 /p:OutputPath=. /p:TargetExt=.dll /p:NoWarn=4996 /I "imgui" /I "detours" /I "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um" /link /LIBPATH:"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64" /LIBPATH:"detours" d3d11.lib d3dcompiler.lib detours.lib
+        if not exist enhanced_hack_v2.dll exit /b 1
+        move enhanced_hack_v2.dll Dll1.dll
       shell: cmd
 
     - name: Upload DLL
