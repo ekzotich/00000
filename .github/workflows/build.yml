@@ -9,15 +9,16 @@ jobs:
 
     - name: Debug Visual Studio Paths
       run: |
-        dir "C:\Program Files (x86)\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" 2>nul
-        if errorlevel 1 dir "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" 2>nul
-        if errorlevel 1 dir "C:\Program Files (x86)\Microsoft Visual Studio\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" 2>nul
-        if errorlevel 1 dir "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" 2>nul
+        dir "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" 2>nul
+        dir "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" 2>nul
+        dir "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" 2>nul
+        dir "C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" 2>nul
       shell: cmd
 
-    - name: Setup MSBuild as Fallback
-      uses: microsoft/setup-msbuild@v1
-      if: failure()
+    - name: Setup MSBuild Environment
+      uses: microsoft/setup-msbuild@v2
+      with:
+        msbuild-architecture: x64
 
     - name: Add ImGui Source
       run: |
@@ -25,4 +26,34 @@ jobs:
         curl -L -o imgui/imgui.zip https://github.com/ocornut/imgui/archive/refs/tags/v1.91.6.zip
         7z x imgui/imgui.zip -oimgui -y
         move imgui\imgui-1.91.6\* imgui\
-        rmdir imgui\
+        rmdir imgui\imgui-1.91.6
+        del imgui\imgui.zip
+      shell: cmd
+
+    - name: Add Detours
+      run: |
+        mkdir detours
+        curl -L -o detours/detours.zip https://github.com/microsoft/Detours/archive/refs/tags/v4.0.1.zip
+        7z x detours/detours.zip -odetours -y
+        move detours\Detours-4.0.1\* detours\
+        rmdir detours\Detours-4.0.1
+        del detours\detours.zip
+        copy detours\lib.X64\detours.lib detours\
+        copy detours\include\detours.h detours\
+      shell: cmd
+
+    - name: Build DLL
+      run: |
+        call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" x64
+        if errorlevel 1 call "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64
+        if errorlevel 1 call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64
+        if errorlevel 1 call "C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+        cl /Y- /O2 /MD /W4 /TP /EHsc /D "WIN32_LEAN_AND_MEAN" /D "NOMINMAX" /D "_HAS_PCH=0" /I "C:\Program Files (x86)\Windows Kits\10\include\10.0.22621.0\um" /I "C:\Program Files (x86)\Windows Kits\10\include\10.0.22621.0\shared" /I "imgui" /I "detours" enhanced_hack_v2.cpp imgui\imgui.cpp imgui\imgui_draw.cpp imgui\imgui_widgets.cpp imgui\imgui_tables.cpp imgui\backends\imgui_impl_dx11.cpp imgui\backends\imgui_impl_win32.cpp /link /DLL /OUT:Dll1.dll /LIBPATH:"C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64" /LIBPATH:"detours" d3d11.lib d3dcompiler.lib advapi32.lib winmm.lib detours.lib user32.lib
+        if not exist Dll1.dll exit 1
+      shell: cmd
+
+    - name: Upload DLL
+      uses: actions/upload-artifact@v4
+      with:
+        name: Dll1.dll
+        path: Dll1.dll
