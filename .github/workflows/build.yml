@@ -10,17 +10,14 @@ jobs:
     - name: Install Visual Studio Build Tools
       run: |
         echo Installing Visual Studio 2022 Build Tools...
-        choco install visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.Component.MSBuild --add Microsoft.VisualStudio.Component.Windows10SDK --add Microsoft.VisualStudio.Component.VC.CoreIde" -y
-        if errorlevel 1 (
-          echo Failed to install Visual Studio Build Tools.
-          exit 1
-        )
+        choco install visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.Component.MSBuild --add Microsoft.VisualStudio.Component.Windows10SDK --add Microsoft.VisualStudio.Component.VC.CoreIde" -y || if errorlevel 3010 echo Reboot required but continuing...
         echo Visual Studio Build Tools installed successfully.
       shell: cmd
 
     - name: Refresh Environment
       run: |
         refreshenv
+        echo Refreshed environment variables.
       shell: cmd
 
     - name: Find Visual Studio Path with vswhere
