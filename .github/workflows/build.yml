@@ -26,6 +26,7 @@ jobs:
         run: |
           echo Configuring MSVC Preview environment...
           call "C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Auxiliary\Build\vcvarsall.bat" x64
+          set "PATH=%PATH%;C:\Program Files\Microsoft Visual Studio\2022\Preview\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64"
           echo MSVC Preview environment initialized.
         shell: cmd
 
@@ -47,7 +48,3 @@ jobs:
         if: success()
         run: echo Build completed successfully!
         shell: cmd
-
-# Ограничения окружения
-env:
-  PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Preview\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64;${{ env.PATH }}"
