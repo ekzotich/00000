@@ -12,6 +12,11 @@ jobs:
       with:
         msbuild-architecture: x64
 
+    - name: Configure MSVC Environment
+      run: |
+        call "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64
+      shell: cmd
+
     - name: Add ImGui Source
       run: |
         mkdir imgui
